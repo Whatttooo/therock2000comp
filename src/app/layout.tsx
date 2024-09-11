@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter as FontSans } from "next/font/google";
 import "./globals.css";
+import { ReactQueryClientProvider } from "@/providers/ReactQueryClientProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+import { cn } from "@/lib/utils";
+import Header from "@/components/header/Header";
+import { NowPlayingHeader } from "@/components/now-playing/NowPlaying";
+
+const fontSans = FontSans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -16,7 +24,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body
+        className={cn(
+          "dark min-h-screen bg-background font-sans antialiased",
+          fontSans.variable
+        )}
+      >
+        <ReactQueryClientProvider>
+          <main className="min-h-screen grid w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+            <Header />
+            <div>
+              <NowPlayingHeader />
+              <div className="w-full p-8 md:p-24">{children}</div>
+            </div>
+          </main>
+        </ReactQueryClientProvider>
+      </body>
     </html>
   );
 }
