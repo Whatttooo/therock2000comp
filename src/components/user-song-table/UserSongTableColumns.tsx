@@ -15,7 +15,7 @@ export const columns: ColumnDef<Song>[] = [
     accessorKey: "ARTIST",
   },
   {
-    header: "Album Art",
+    header: "Album",
     accessorKey: "ARTWORK",
     cell: ({ row }) => (
       <Image
@@ -29,15 +29,12 @@ export const columns: ColumnDef<Song>[] = [
   {
     header: ({ column }) => {
       return (
-        <div className="flex items-center gap-2 md:gap-4">
+        <div
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-2 md:gap-4 rounded-md p-1 hover:bg-slate-800 cursor-pointer pl-0 w-fit"
+        >
           Rank
-          <Button
-            className="max-w-fit"
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+          <ArrowUpDown className="h-4 w-4" />
         </div>
       );
     },
@@ -46,15 +43,12 @@ export const columns: ColumnDef<Song>[] = [
   {
     header: ({ column }) => {
       return (
-        <div className="flex items-center gap-2 md:gap-4">
+        <div
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-2 md:gap-4 rounded-md p-1 hover:bg-slate-800 cursor-pointer pl-0 w-fit"
+        >
           Points
-          <Button
-            className="max-w-fit"
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+          <ArrowUpDown className="h-4 w-4" />
         </div>
       );
     },

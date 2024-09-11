@@ -31,8 +31,8 @@ export function ShowNowPlaying({ initialData }: { initialData: Song }) {
             height={50}
             alt="album art of now playing"
           />
-          <h2 className="text-2xl">{data.SONG}</h2>
-          <h2 className="text-xl">{data.ARTIST}</h2>
+          <h2 className="md:text-2xl">{data.SONG}</h2>
+          <h2 className="md:text-xl">{data.ARTIST}</h2>
         </>
       )}
       {isRefetching ? (

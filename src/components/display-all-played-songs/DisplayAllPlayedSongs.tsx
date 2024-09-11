@@ -43,14 +43,16 @@ export const DisplayAllPlayedSongs = ({
 
   return (
     <div className="flex flex-col gap-7">
-      <h1 className="text-2xl md:text-6xl font-bold">All played songs 🎸</h1>
-      <div className="flex items-center py-4">
-        <Input
-          placeholder="Filter songs..."
-          value={filtering}
-          onChange={handleInputChange}
-          className="max-w-sm"
-        />
+      <div className="p-3">
+        <h1 className="text-2xl md:text-6xl font-bold">All played songs 🎸</h1>
+        <div className="flex items-center py-4">
+          <Input
+            placeholder="Filter songs..."
+            value={filtering}
+            onChange={handleInputChange}
+            className="max-w-sm"
+          />
+        </div>
       </div>
       {loading ? (
         <div className="flex flex-col gap-7">

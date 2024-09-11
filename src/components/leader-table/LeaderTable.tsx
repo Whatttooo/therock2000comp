@@ -45,8 +45,8 @@ export const LeaderTable = <TData, TValue>({
   });
 
   return (
-    <div className="rounded-md border-4 w-full text-2xl">
-      <Table className="text-lg">
+    <div className="rounded-md border-4 w-full md:text-2xl">
+      <Table className="md:text-lg">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>

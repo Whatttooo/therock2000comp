@@ -14,8 +14,8 @@ export default async function SongPage({ params }: SongPageProps) {
 
   return (
     <>
-      <Card className="p-3">
-        <div className="flex gap-8">
+      <Card className="p-3 m-4 md:m-0">
+        <div className="flex flex-col md:flex-row gap-8">
           <Image
             className="rounded-lg"
             src={song.albumArt}

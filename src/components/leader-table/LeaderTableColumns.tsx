@@ -19,15 +19,12 @@ export const columns: ColumnDef<User>[] = [
     accessorKey: "points",
     header: ({ column }) => {
       return (
-        <div className="flex items-center gap-2 md:gap-4">
+        <div
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-2 md:gap-4 rounded-md p-1 pl-0 hover:bg-slate-800 cursor-pointer w-fit"
+        >
           Points
-          <Button
-            className="max-w-fit"
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+          <ArrowUpDown className="h-4 w-4" />
         </div>
       );
     },
@@ -35,15 +32,12 @@ export const columns: ColumnDef<User>[] = [
   {
     header: ({ column }) => {
       return (
-        <div className="flex items-center gap-2 md:gap-4">
-          Number of Songs Played
-          <Button
-            className="max-w-fit"
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            <ArrowUpDown className="h-4 w-4" />
-          </Button>
+        <div
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-2 md:gap-4 rounded-md p-1 pl-0 hover:bg-slate-800 cursor-pointer w-fit"
+        >
+          No. Songs Played
+          <ArrowUpDown className="h-4 w-4" />
         </div>
       );
     },

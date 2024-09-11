@@ -60,8 +60,8 @@ export const UserSongTable = <TData, TValue>({
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-md border-4 w-full text-2xl ">
-        <Table className="text-lg">
+      <div className="rounded-md border-2 m-0 md:m-1 md:border-4 md:w-full md:text-2xl ">
+        <Table className="md:text-lg">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

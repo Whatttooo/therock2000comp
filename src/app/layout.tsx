@@ -35,7 +35,7 @@ export default function RootLayout({
             <Header />
             <div>
               <NowPlayingHeader />
-              <div className="w-full p-8 md:p-24">{children}</div>
+              <div className="w-full md:p-24">{children}</div>
             </div>
           </main>
         </ReactQueryClientProvider>
