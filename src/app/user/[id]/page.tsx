@@ -11,6 +11,8 @@ interface UserPageProps {
   params: { id: string };
 }
 
+export const revalidate = 300;
+
 export default async function UserPage({ params }: UserPageProps) {
   const user = await getUserById(parseInt(params.id));
   if (!user) return notFound();

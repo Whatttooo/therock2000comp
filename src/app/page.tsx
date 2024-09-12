@@ -1,7 +1,8 @@
 import { LeaderTable } from "@/components/leader-table/LeaderTable";
 import { columns } from "@/components/leader-table/LeaderTableColumns";
 import { getUsersForLeaderBoard } from "@/server/actions/actions";
-import { Trophy } from "lucide-react";
+
+export const revalidate = 300;
 
 export default async function Home() {
   const data = await getUsersForLeaderBoard();
