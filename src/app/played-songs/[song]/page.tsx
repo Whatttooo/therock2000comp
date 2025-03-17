@@ -4,10 +4,11 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 import Image from "next/image";
 
 interface SongPageProps {
-  params: { song: string };
+  params: Promise<{ song: string }>;
 }
 
-export default async function SongPage({ params }: SongPageProps) {
+export default async function SongPage(props: SongPageProps) {
+  const params = await props.params;
   const song = await getSongByRank(parseInt(params.song));
   const calculatePlacesUpOrDown =
     parseInt(song.rankOneYearAgo) - parseInt(song.rank);

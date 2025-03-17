@@ -8,12 +8,13 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 
 interface UserPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export const revalidate = 300;
 
-export default async function UserPage({ params }: UserPageProps) {
+export default async function UserPage(props: UserPageProps) {
+  const params = await props.params;
   const user = await getUserById(parseInt(params.id));
   if (!user) return notFound();
   const latestPlayedSong = await getMostRecentlyPlayedSong(user.songs);
