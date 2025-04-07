@@ -16,7 +16,7 @@ export default async function SongPage(props: SongPageProps) {
   return (
     <>
       <Card className="p-3 m-4 md:m-0">
-        <div className="flex flex-col md:flex-row gap-8">
+        <div className="flex flex-col md:flex-row gap-12 md:gap-8">
           <Image
             className="rounded-lg"
             src={song.albumArt}
@@ -24,7 +24,7 @@ export default async function SongPage(props: SongPageProps) {
             width={500}
             height={500}
           />
-          <div className="flex flex-col justify-between p-3">
+          <div className="flex flex-col justify-between p-3 gap-2 md:gap-0">
             <div>
               <h1 className="text-3xl">
                 <span className="text-red-400">{song.rank}:</span> {song.title}
