@@ -2,6 +2,11 @@
 import type { Song } from "@/data/rock2000songs";
 import { rock2000songs } from "@/data/rock2000songs";
 import { type User, users } from "@/data/users";
+import {
+  getNumberOfSongsPlayed,
+  getSongFromPlayedSong,
+  getUserPoints,
+} from "./actionUtils";
 const rock2000PlayedEndpoint =
   "https://radio-api.mediaworks.nz/comp-api/v1/countdown/therock";
 
@@ -48,20 +53,6 @@ export const getCurrentPlayedSong = async (): Promise<PlayedSong> => {
 };
 
 /**
- * Retrieves a song from the list of played songs based on the provided played song object.
- *
- * @param playedSong - The played song object containing the title and artist of the song.
- * @returns The matching song object from the list of played songs, or null if no match is found.
- */
-export const getSongFromPlayedSong = (playedSong: PlayedSong): Song | null => {
-  const { title, artist } = playedSong;
-  const song = rock2000songs.find(
-    (song) => song.SONG === title && song.ARTIST === artist
-  );
-  return song || null;
-};
-
-/**
  * Retrieves all played songs.
  * @returns {Promise<PlayedSong[]>} A promise that resolves to an array of PlayedSong objects.
  * @throws {Error} If there is an error fetching the songs.
@@ -76,23 +67,6 @@ export const getAllPlayedSongs = async (): Promise<PlayedSong[]> => {
   }
 };
 
-/**
- * Searches for songs based on a search term.
- *
- * @param term - The search term.
- * @param songs - The list of songs to search within.
- * @returns An array of songs that match the search term.
- */
-export const searchSongs = (term: string, songs: Song[]): Song[] => {
-  if (!term) return songs;
-  const lowercasedTerm = term.toLowerCase();
-  return songs.filter(
-    (song) =>
-      song.SONG.toLowerCase().includes(lowercasedTerm) ||
-      song.ARTIST.toLowerCase().includes(lowercasedTerm)
-  );
-};
-
 export const getSongByRank = async (rank: number): Promise<PlayedSong> => {
   const allPlayedSongs = await getAllPlayedSongs();
   const song = allPlayedSongs.find((song) => parseInt(song.rank) === rank);
@@ -104,12 +78,12 @@ export const getSongByRank = async (rank: number): Promise<PlayedSong> => {
 };
 
 const getPlayedSongArt = async (
-  playedSong: PlayedSong
+  playedSong: PlayedSong,
 ): Promise<PlayedSong> => {
   const song = rock2000songs.find(
     (rock2000song) =>
       rock2000song.SONG.toLowerCase() === playedSong.title.toLowerCase() &&
-      rock2000song.ARTIST.toLowerCase() === playedSong.artist.toLowerCase()
+      rock2000song.ARTIST.toLowerCase() === playedSong.artist.toLowerCase(),
   );
   if (song) {
     return { ...playedSong, albumArt: song.ARTWORK };
@@ -127,7 +101,7 @@ export const getAllPlayedSongsWithArt = async (): Promise<Song[]> => {
     const playedSong = rock2000songs.find(
       (song) =>
         songToUpdate.title.toLowerCase() === song.SONG.toLowerCase() &&
-        songToUpdate.artist.toLowerCase() === song.ARTIST.toLowerCase()
+        songToUpdate.artist.toLowerCase() === song.ARTIST.toLowerCase(),
     );
     if (playedSong) {
       return {
@@ -154,7 +128,7 @@ export const updateSong = async (song: Song) => {
   const playedSongFromList = playedSongs.find(
     (playedSong) =>
       playedSong.title.toLowerCase() === song.SONG.toLowerCase() &&
-      playedSong.artist.toLowerCase() === song.ARTIST.toLowerCase()
+      playedSong.artist.toLowerCase() === song.ARTIST.toLowerCase(),
   );
   if (!playedSongFromList) {
     return song;
@@ -175,7 +149,7 @@ export const updateSongListPoints = async (songsToUpdate: Song[]) => {
     const playedSongFromList = allPlayedSongs.find(
       (song) =>
         song.title.toLowerCase() === songToUpdate.SONG.toLowerCase() &&
-        song.artist.toLowerCase() === songToUpdate.ARTIST.toLowerCase()
+        song.artist.toLowerCase() === songToUpdate.ARTIST.toLowerCase(),
     );
 
     if (!playedSongFromList) {
@@ -190,26 +164,6 @@ export const updateSongListPoints = async (songsToUpdate: Song[]) => {
   });
 };
 
-export const getUserPoints = (songs: Song[]): number => {
-  const songsWithPoints = songs.filter((song) => song.POINTS !== undefined);
-
-  return songsWithPoints.reduce((acc, song) => acc + (song.POINTS ?? 0), 0);
-};
-
-export const getNumberOfSongsPlayed = (songs: Song[]): number => {
-  return songs.filter((song) => song.POINTS !== undefined).length;
-};
-
-export const getMostRecentlyPlayedSong = (songs: Song[]): Song => {
-  const songWithHighestPoints = songs.reduce((prevSong, currentSong) => {
-    return currentSong.POINTS && currentSong.POINTS > (prevSong?.POINTS ?? 0)
-      ? currentSong
-      : prevSong;
-  });
-
-  return songWithHighestPoints;
-};
-
 export const getUsersForLeaderBoard = async (): Promise<User[]> => {
   const usersForLeaderBoard = await Promise.all(
     users.map(async (user) => {
@@ -221,7 +175,7 @@ export const getUsersForLeaderBoard = async (): Promise<User[]> => {
         numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
       };
       return updatedUser;
-    })
+    }),
   );
   return usersForLeaderBoard;
 };

@@ -4,7 +4,7 @@ import { SongCard } from "../song-card/SongCard";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "../ui/input";
 import { useDebouncedCallback } from "use-debounce";
-import { searchSongs } from "@/server/actions/actions";
+import { searchSongs } from "@/server/actions/actionUtils";
 import { Skeleton } from "../ui/skeleton";
 
 interface DisplayAllPlayedSongsProps {
@@ -38,7 +38,7 @@ export const DisplayAllPlayedSongs = ({
       setFiltering(event.target.value);
       handleOnChange(event.target.value);
     },
-    [handleOnChange]
+    [handleOnChange],
   );
 
   return (
