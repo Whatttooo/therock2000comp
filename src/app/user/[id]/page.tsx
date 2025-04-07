@@ -1,11 +1,9 @@
 import { UserSongTable } from "@/components/user-song-table/UserSongTable";
 import { columns } from "@/components/user-song-table/UserSongTableColumns";
-import {
-  getMostRecentlyPlayedSong,
-  getUserById,
-} from "@/server/actions/actions";
+import { getUserById } from "@/server/actions/actions";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { getMostRecentlyPlayedSong } from "@/server/actions/actionUtils";
 
 interface UserPageProps {
   params: Promise<{ id: string }>;
@@ -17,7 +15,7 @@ export default async function UserPage(props: UserPageProps) {
   const params = await props.params;
   const user = await getUserById(parseInt(params.id));
   if (!user) return notFound();
-  const latestPlayedSong = await getMostRecentlyPlayedSong(user.songs);
+  const latestPlayedSong = getMostRecentlyPlayedSong(user.songs);
   return (
     <>
       <div className="p-6 md:p-0">
@@ -30,7 +28,9 @@ export default async function UserPage(props: UserPageProps) {
           </h2>
           <h2>
             Number of songs played:{" "}
-            <span className="text-red-400">{user.numberOfSongsPlayed}</span>{" "}
+            <span className="text-red-400">
+              {user.numberOfSongsPlayed}
+            </span>{" "}
           </h2>
         </div>
         <div className="flex text-2xl items-center mt-10 flex-wrap md:flex-nowrap gap-2 md:gap-4 ">
@@ -39,7 +39,8 @@ export default async function UserPage(props: UserPageProps) {
             <span className="text-red-400">{latestPlayedSong.SONG}</span>{" "}
           </h2>
           <h2>
-            By: <span className="text-red-400">{latestPlayedSong.ARTIST}</span>{" "}
+            By:{" "}
+            <span className="text-red-400">{latestPlayedSong.ARTIST}</span>{" "}
           </h2>
 
           <h2 className="">
