@@ -1,11 +1,10 @@
 import { LeaderTable } from "@/components/leader-table/LeaderTable";
 import { columns } from "@/components/leader-table/LeaderTableColumns";
-import { getUsersForLeaderBoard } from "@/server/actions/actions";
 
 export const revalidate = 300;
 
 export default async function Home() {
-  const data = await getUsersForLeaderBoard();
+  // const data = await getUsersForLeaderBoard();
   return (
     <div className="flex flex-col gap-11">
       <div className="p-4">
@@ -17,7 +16,8 @@ export default async function Home() {
         </h2>
       </div>
       <div className="flex items-center w-full ">
-        <LeaderTable columns={columns} data={data} />
+        New things coming soon
+        {/* <LeaderTable columns={columns} data={data} /> */}
       </div>
     </div>
   );
