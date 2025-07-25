@@ -34,7 +34,6 @@ export default function RootLayout({
           <main className="min-h-screen grid w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
             <Header />
             <div>
-              <NowPlayingHeader />
               <div className="w-full md:p-24">{children}</div>
             </div>
           </main>

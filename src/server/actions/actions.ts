@@ -1,7 +1,6 @@
 "use server";
 import type { Song } from "@/data/rock2000songs";
 import { rock2000songs } from "@/data/rock2000songs";
-import { type User, users } from "@/data/users";
 import {
   getNumberOfSongsPlayed,
   getSongFromPlayedSong,
@@ -78,12 +77,12 @@ export const getSongByRank = async (rank: number): Promise<PlayedSong> => {
 };
 
 const getPlayedSongArt = async (
-  playedSong: PlayedSong,
+  playedSong: PlayedSong
 ): Promise<PlayedSong> => {
   const song = rock2000songs.find(
     (rock2000song) =>
       rock2000song.SONG.toLowerCase() === playedSong.title.toLowerCase() &&
-      rock2000song.ARTIST.toLowerCase() === playedSong.artist.toLowerCase(),
+      rock2000song.ARTIST.toLowerCase() === playedSong.artist.toLowerCase()
   );
   if (song) {
     return { ...playedSong, albumArt: song.ARTWORK };
@@ -101,7 +100,7 @@ export const getAllPlayedSongsWithArt = async (): Promise<Song[]> => {
     const playedSong = rock2000songs.find(
       (song) =>
         songToUpdate.title.toLowerCase() === song.SONG.toLowerCase() &&
-        songToUpdate.artist.toLowerCase() === song.ARTIST.toLowerCase(),
+        songToUpdate.artist.toLowerCase() === song.ARTIST.toLowerCase()
     );
     if (playedSong) {
       return {
@@ -128,7 +127,7 @@ export const updateSong = async (song: Song) => {
   const playedSongFromList = playedSongs.find(
     (playedSong) =>
       playedSong.title.toLowerCase() === song.SONG.toLowerCase() &&
-      playedSong.artist.toLowerCase() === song.ARTIST.toLowerCase(),
+      playedSong.artist.toLowerCase() === song.ARTIST.toLowerCase()
   );
   if (!playedSongFromList) {
     return song;
@@ -149,7 +148,7 @@ export const updateSongListPoints = async (songsToUpdate: Song[]) => {
     const playedSongFromList = allPlayedSongs.find(
       (song) =>
         song.title.toLowerCase() === songToUpdate.SONG.toLowerCase() &&
-        song.artist.toLowerCase() === songToUpdate.ARTIST.toLowerCase(),
+        song.artist.toLowerCase() === songToUpdate.ARTIST.toLowerCase()
     );
 
     if (!playedSongFromList) {
@@ -164,34 +163,34 @@ export const updateSongListPoints = async (songsToUpdate: Song[]) => {
   });
 };
 
-export const getUsersForLeaderBoard = async (): Promise<User[]> => {
-  const usersForLeaderBoard = await Promise.all(
-    users.map(async (user) => {
-      const userUpdatedSongs = await updateSongListPoints(user.songs);
-      const updatedUser = {
-        ...user,
-        songs: [...userUpdatedSongs],
-        points: await getUserPoints(userUpdatedSongs),
-        numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
-      };
-      return updatedUser;
-    }),
-  );
-  return usersForLeaderBoard;
-};
+// export const getUsersForLeaderBoard = async (): Promise<User[]> => {
+//   const usersForLeaderBoard = await Promise.all(
+//     users.map(async (user) => {
+//       const userUpdatedSongs = await updateSongListPoints(user.songs);
+//       const updatedUser = {
+//         ...user,
+//         songs: [...userUpdatedSongs],
+//         points: await getUserPoints(userUpdatedSongs),
+//         numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
+//       };
+//       return updatedUser;
+//     })
+//   );
+//   return usersForLeaderBoard;
+// };
 
-export const getUserById = async (id: number): Promise<User | null> => {
-  const user = users.find((user) => user.id === id);
-  if (!user) {
-    return null;
-  }
+// export const getUserById = async (id: number): Promise<User | null> => {
+//   const user = users.find((user) => user.id === id);
+//   if (!user) {
+//     return null;
+//   }
 
-  const userUpdatedSongs = await updateSongListPoints(user.songs);
-  const updatedUser = {
-    ...user,
-    songs: [...userUpdatedSongs],
-    points: await getUserPoints(userUpdatedSongs),
-    numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
-  };
-  return updatedUser;
-};
+//   const userUpdatedSongs = await updateSongListPoints(user.songs);
+//   const updatedUser = {
+//     ...user,
+//     songs: [...userUpdatedSongs],
+//     points: await getUserPoints(userUpdatedSongs),
+//     numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
+//   };
+//   return updatedUser;
+// };

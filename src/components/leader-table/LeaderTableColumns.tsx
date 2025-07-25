@@ -1,10 +1,17 @@
 "use client";
+import { Song } from "@/data/rock2000songs";
 import { ColumnDef } from "@tanstack/react-table";
 
-import type { User } from "@/data/users";
-import { users } from "@/data/users";
-import { Button } from "../ui/button";
 import { ArrowUpDown } from "lucide-react";
+
+export type User = {
+  id: number;
+  firstName: string;
+  lastName: string;
+  songs: Song[];
+  points: number;
+  numberOfSongsPlayed: number;
+};
 
 export const columns: ColumnDef<User>[] = [
   {
