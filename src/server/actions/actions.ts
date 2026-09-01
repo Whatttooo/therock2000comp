@@ -105,7 +105,7 @@ export const getAllPlayedSongsWithArt = async (): Promise<Song[]> => {
     if (playedSong) {
       return {
         ...playedSong,
-        ARTWORK: playedSong.ARTWORK,
+        ARTWORK: "https://images.mediaworks.nz/therock/Content/apps/theme/images/therock_square4x.png?width=400&height=400&crop=auto",
         PLAYED_AT: parseInt(songToUpdate.rank),
         POINTS: 2000 - parseInt(songToUpdate.rank),
       };

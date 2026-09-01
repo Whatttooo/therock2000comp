@@ -8,18 +8,18 @@ export const SongCard = ({ song }: { song: Song }) => {
   return (
     <Card
       onClick={() => router.push(`/played-songs/${song.PLAYED_AT}`)}
-      className="flex flex-col justify-center items-center w-fit max-w-64 cursor-pointer hover:scale-125 transition-all"
+      className="flex flex-col justify-center md:items-center w-full  md:w-fit md:max-w-64 cursor-pointer hover:scale-105 transition-all"
     >
-      <CardHeader className="p-2">
+      <CardHeader className="p-2 min-w-[250px] min-h-[250px]">
         <Image
-          className="rounded-lg"
+          className="rounded-lg w-full h-auto"
           src={song.ARTWORK}
           width={250}
           height={250}
           alt="album art of current song"
         />
       </CardHeader>
-      <CardContent className="pl-3 pt-3">
+      <CardContent className="w-full self-start">
         <div className="flex flex-col gap-2 md:gap-4">
           <h2 className="text-xl font-semibold">{song.SONG}</h2>
           <div className="flex gap-4 justify-between">

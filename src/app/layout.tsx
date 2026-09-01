@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter as FontSans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ReactQueryClientProvider } from "@/providers/ReactQueryClientProvider";
 
@@ -7,10 +7,7 @@ import { cn } from "@/lib/utils";
 import Header from "@/components/header/Header";
 import { NowPlayingHeader } from "@/components/now-playing/NowPlaying";
 
-const fontSans = FontSans({
-  subsets: ["latin"],
-  variable: "--font-sans",
-});
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: "Rock 2000 competition 🎸",
@@ -23,15 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", inter.variable)}>
       <body
         className={cn(
           "dark min-h-screen bg-background font-sans antialiased",
-          fontSans.variable
+          inter.variable
         )}
       >
         <ReactQueryClientProvider>
-          <main className="min-h-screen grid w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+          <main className="md:min-h-screen grid grid-cols-1 w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
             <Header />
             <div>
               <div className="w-full md:p-24">{children}</div>

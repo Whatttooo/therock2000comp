@@ -16,29 +16,31 @@ export default async function SongPage(props: SongPageProps) {
   return (
     <>
       <Card className="p-3 m-4 md:m-0">
-        <div className="flex flex-col md:flex-row gap-12 md:gap-8">
+        <div className="flex flex-col md:flex-row md:gap-8">
           <Image
             className="rounded-lg"
-            src={song.albumArt}
+            src='https://images.mediaworks.nz/therock/Content/apps/theme/images/therock_square4x.png?width=400&height=400&crop=auto'
             alt={song.title}
             width={500}
             height={500}
           />
-          <div className="flex flex-col justify-between p-3 gap-2 md:gap-0">
-            <div>
-              <h1 className="text-3xl">
-                <span className="text-red-400">{song.rank}:</span> {song.title}
-              </h1>
-              <h2 className="text-2xl">{song.artist}</h2>
-              <p>
+          <div className="flex flex-col justify-between py-3 md:py-0 gap-4 md:gap-0">
+            <div className="flex flex-col gap-2">
+              <div>
+                <h1 className="text-2xl md:text-3xl">
+                  <span className="text-red-400">{song.rank}:</span> {song.title}
+                </h1>
+                <h2 className="text-lg md:text-2xl">{song.artist}</h2>
+              </div>
+              <p className="text-muted-foreground">
                 Album: {song.album}. Released in {song.albumYear}
               </p>
               {calculatePlacesUpOrDown > 0 ? (
-                <div className="flex gap-3 text-green-500 text-2xl items-center">
+                <div className="flex gap-3 text-green-500 md:text-xl items-center">
                   Up {calculatePlacesUpOrDown} <TrendingUp size={24} />
                 </div>
               ) : (
-                <div className="flex gap-3 text-red-500 text-2xl items-center">
+                <div className="flex gap-3 text-red-500 text-lg md:text-2xl items-center">
                   Down {Math.abs(calculatePlacesUpOrDown)}{" "}
                   <TrendingDown size={24} />
                 </div>

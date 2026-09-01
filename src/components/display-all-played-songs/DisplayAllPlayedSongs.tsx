@@ -42,9 +42,9 @@ export const DisplayAllPlayedSongs = ({
   );
 
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-2 md:gap-7">
       <div className="p-3">
-        <h1 className="text-2xl md:text-6xl font-bold">All played songs 🎸</h1>
+        <h1 className="text-2xl md:text-4xl font-bold">All played songs 🎸</h1>
         <div className="flex items-center py-4">
           <Input
             placeholder="Filter songs..."
@@ -66,7 +66,7 @@ export const DisplayAllPlayedSongs = ({
           </div>
         </div>
       ) : (
-        <div className="flex gap-3 md:gap-5 flex-wrap justify-center md:justify-start">
+        <div className="flex p-3 md:p-0 gap-3 md:gap-5 flex-wrap justify-center md:justify-start">
           {Array.isArray(filteredSongs) && filteredSongs.length > 0 ? (
             filteredSongs.map((song) => (
               <SongCard key={`${song.SONG} ${song.ARTIST}`} song={song} />
