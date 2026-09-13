@@ -1,12 +1,18 @@
-import { getCurrentSong } from "@/server/actions/actions";
+import { getCurrentSongDetail } from "@/server/actions/actions";
 import { ShowNowPlaying } from "../show-now-playing/ShowNowPlaying";
 
 export async function NowPlayingHeader() {
-  const initialSongData = await getCurrentSong();
-
-  return (
-    <div className="w-full p-3 flex border-b-2 md:min-h-20">
-      <ShowNowPlaying initialData={initialSongData} />
-    </div>
-  );
+  try {
+    const initialSongDetail = await getCurrentSongDetail();
+    return (
+      <div className="flex">
+        <ShowNowPlaying initialData={initialSongDetail} />
+      </div>
+    );
+  } catch {
+    // Renders on every page via the root layout — if the currently playing
+    // song can't be resolved (e.g. not yet on Spotify), hide the header
+    // rather than take down the whole page with an unhandled error.
+    return null;
+  }
 }

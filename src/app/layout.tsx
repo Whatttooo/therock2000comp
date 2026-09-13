@@ -4,10 +4,8 @@ import "./globals.css";
 import { ReactQueryClientProvider } from "@/providers/ReactQueryClientProvider";
 
 import { cn } from "@/lib/utils";
-import Header from "@/components/header/Header";
-import { NowPlayingHeader } from "@/components/now-playing/NowPlaying";
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Rock 2000 competition 🎸",
@@ -24,17 +22,10 @@ export default function RootLayout({
       <body
         className={cn(
           "dark min-h-screen bg-background font-sans antialiased",
-          inter.variable
+          inter.variable,
         )}
       >
-        <ReactQueryClientProvider>
-          <main className="md:min-h-screen grid grid-cols-1 w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-            <Header />
-            <div>
-              <div className="w-full md:p-24">{children}</div>
-            </div>
-          </main>
-        </ReactQueryClientProvider>
+        <ReactQueryClientProvider>{children}</ReactQueryClientProvider>
       </body>
     </html>
   );

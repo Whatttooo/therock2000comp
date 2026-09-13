@@ -21,9 +21,9 @@ export const SongCard = ({ song }: { song: Song }) => {
       </CardHeader>
       <CardContent className="w-full self-start">
         <div className="flex flex-col gap-2 md:gap-4">
-          <h2 className="text-xl font-semibold">{song.SONG}</h2>
+          <h2 className="text-lg font-semibold">{song.SONG}</h2>
           <div className="flex gap-4 justify-between">
-            <h3 className="text-base font-semibold text-wrap text-muted-foreground">
+            <h3 className="text-base truncate font-semibold  text-muted-foreground">
               by {song.ARTIST}
             </h3>
             <h3 className="text-base font-semibold text-muted-foreground">

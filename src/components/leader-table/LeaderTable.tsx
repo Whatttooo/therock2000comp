@@ -2,10 +2,8 @@
 import {
   ColumnDef,
   flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
   SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 
 import {
@@ -18,46 +16,53 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { leaderTableFeatures } from "./LeaderTableColumns";
 
-interface LeaderTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface LeaderTableProps<
+  TData extends Record<string, unknown> & { id: string },
+> {
+  columns: ColumnDef<typeof leaderTableFeatures, TData>[];
   data: TData[];
+  currentUserId?: string;
 }
 
-export const LeaderTable = <TData, TValue>({
+export const LeaderTable = <
+  TData extends Record<string, unknown> & { id: string },
+>({
   columns,
   data,
-}: LeaderTableProps<TData, TValue>) => {
+  currentUserId,
+}: LeaderTableProps<TData>) => {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "points", desc: true },
   ]);
   const router = useRouter();
 
-  const table = useReactTable({
+  const table = useTable({
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
+    features: leaderTableFeatures,
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     state: {
       sorting,
     },
   });
 
   return (
-    <div className="rounded-md border-4 w-full md:text-2xl">
+    <div className="rounded-lg border-1 w-full md:text-xl">
       <Table className="md:text-lg">
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => {
                 return (
-                  <TableHead className="font-bold" key={header.id}>
+                  <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
                       : flexRender(
                           header.column.columnDef.header,
-                          header.getContext()
+                          header.getContext(),
                         )}
                   </TableHead>
                 );
@@ -69,11 +74,14 @@ export const LeaderTable = <TData, TValue>({
           {table.getRowModel().rows.map((row) => (
             <TableRow
               key={row.id}
-              className="cursor-pointer"
-              data-state={row.getIsSelected() && "selected"}
-              onClick={() => router.push(`/user/${row.getValue("id")}`)}
+              className={cn(
+                "cursor-pointer",
+                row.original.id === currentUserId &&
+                  "bg-primary/10 font-semibold",
+              )}
+              onClick={() => router.push(`/profiles/${row.original.id}`)}
             >
-              {row.getVisibleCells().map((cell) => (
+              {row.getAllCells().map((cell) => (
                 <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>

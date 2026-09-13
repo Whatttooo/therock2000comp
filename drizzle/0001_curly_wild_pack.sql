@@ -1,0 +1,1 @@
+ALTER TABLE "votes" ADD COLUMN "is_top_pick" boolean DEFAULT false NOT NULL;
