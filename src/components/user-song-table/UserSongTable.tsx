@@ -2,11 +2,8 @@
 import {
   ColumnDef,
   flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
   SortingState,
-  useReactTable,
+  useTable,
 } from "@tanstack/react-table";
 
 import {
@@ -20,30 +17,33 @@ import {
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "../ui/input";
+import { userSongTableFeatures } from "./UserSongTableColumns";
 
-interface UserSongTableProps<TData, TValue> {
-  columns: ColumnDef<TData, TValue>[];
+interface UserSongTableProps<
+  TData extends Record<string, unknown> & { id: string },
+> {
+  columns: ColumnDef<typeof userSongTableFeatures, TData>[];
   data: TData[];
 }
 
-export const UserSongTable = <TData, TValue>({
+export const UserSongTable = <
+  TData extends Record<string, unknown> & { id: string },
+>({
   columns,
   data,
-}: UserSongTableProps<TData, TValue>) => {
+}: UserSongTableProps<TData>) => {
   const [sorting, setSorting] = useState<SortingState>([
-    { id: "PLAYED_AT", desc: false },
+    { id: "points", desc: true },
   ]);
   const [filtering, setFiltering] = useState("");
   const router = useRouter();
 
-  const table = useReactTable({
+  const table = useTable({
     data,
     columns,
-    getCoreRowModel: getCoreRowModel(),
+    features: userSongTableFeatures,
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
     onGlobalFilterChange: setFiltering,
-    getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
       globalFilter: filtering,
@@ -60,19 +60,19 @@ export const UserSongTable = <TData, TValue>({
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-md border-2 m-0 md:m-1 md:border-4 md:w-full md:text-2xl ">
+      <div className="rounded-lg border-1 m-0 md:m-1 md:w-full md:text-xl ">
         <Table className="md:text-lg">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead className="font-bold" key={header.id}>
+                    <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   );
@@ -85,13 +85,9 @@ export const UserSongTable = <TData, TValue>({
               <TableRow
                 key={row.id}
                 className="cursor-pointer"
-                data-state={row.getIsSelected() && "selected"}
-                onClick={() => {
-                  if (row.getValue("PLAYED_AT") === undefined) return;
-                  router.push(`/played-songs/${row.getValue("PLAYED_AT")}`);
-                }}
+                onClick={() => router.push(`/played-songs/${row.original.id}`)}
               >
-                {row.getVisibleCells().map((cell) => (
+                {row.getAllCells().map((cell) => (
                   <TableCell key={cell.id}>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

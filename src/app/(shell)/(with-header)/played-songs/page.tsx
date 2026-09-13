@@ -6,6 +6,9 @@ export const revalidate = 300;
 
 export default async function AllSongsPage() {
   const allPlayedSongs = await getAllPlayedSongsWithArt();
-  console.log("hello")
-  return <DisplayAllPlayedSongs songs={allPlayedSongs} />;
+  return (
+    <div className="w-full md:p-16">
+      <DisplayAllPlayedSongs songs={allPlayedSongs} />
+    </div>
+  );
 }

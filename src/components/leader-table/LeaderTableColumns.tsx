@@ -1,26 +1,39 @@
 "use client";
-import { Song } from "@/data/rock2000songs";
-import { ColumnDef } from "@tanstack/react-table";
-
+import {
+  ColumnDef,
+  createSortedRowModel,
+  rowSortingFeature,
+  tableFeatures,
+} from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
+import type { LeaderboardEntry } from "@/server/actions/leaderboardActions";
+import { UserAvatar } from "../UserAvatar";
 
-export type User = {
-  id: number;
-  firstName: string;
-  lastName: string;
-  songs: Song[];
-  points: number;
-  numberOfSongsPlayed: number;
-};
+// LeaderTable only sorts, so only that feature is registered (rather than
+// @tanstack/react-table's `stockFeatures`, which pulls in all 17 built-in
+// features).
+export const leaderTableFeatures = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+});
 
-export const columns: ColumnDef<User>[] = [
+export const columns: ColumnDef<typeof leaderTableFeatures, LeaderboardEntry>[] = [
   {
-    header: "ID",
-    accessorKey: "id",
+    header: "#",
+    id: "rank",
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.getDisplayIndex() + 1}</span>
+    ),
   },
   {
     header: "Name",
-    accessorFn: (row: User) => `${row.firstName} ${row.lastName}`,
+    accessorKey: "name",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <UserAvatar className="h-8 w-8 rounded-full" user={row.original} />
+        <span>{row.original.name}</span>
+      </div>
+    ),
   },
   {
     accessorKey: "points",
@@ -35,6 +48,9 @@ export const columns: ColumnDef<User>[] = [
         </div>
       );
     },
+    cell: ({ row }) => (
+      <span className="tabular-nums">{row.original.points}</span>
+    ),
   },
   {
     header: ({ column }) => {
@@ -49,5 +65,10 @@ export const columns: ColumnDef<User>[] = [
       );
     },
     accessorKey: "numberOfSongsPlayed",
+    cell: ({ row }) => (
+      <span className="tabular-nums">
+        {row.original.numberOfSongsPlayed} / 20
+      </span>
+    ),
   },
 ];

@@ -1,38 +1,56 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { getCurrentSong } from "@/server/actions/actions";
+import { getCurrentSongDetail, SongDetail } from "@/server/actions/actions";
 import Image from "next/image";
-import type { Song } from "@/data/rock2000songs";
 import { Button } from "../ui/button";
 
-export function ShowNowPlaying({ initialData }: { initialData: Song }) {
-  const { data, error, refetch, isRefetching } = useQuery<Song>({
-    queryFn: () => getCurrentSong(),
+const GENERIC_STATION_ARTWORK =
+  "https://images.mediaworks.nz/therock/Content/apps/theme/images/therock_square4x.png?width=400&height=400&crop=auto";
+
+export function ShowNowPlaying({ initialData }: { initialData: SongDetail }) {
+  const { data, error, refetch, isRefetching } = useQuery<SongDetail>({
+    queryFn: () => getCurrentSongDetail(),
     queryKey: ["currentSong"],
     initialData: initialData,
   });
 
   return (
-    <div className="flex gap-5 justify-center items-center">
+    <div className="flex gap-3 md:gap-5 items-center">
       {error ? (
         <>
           <div>Error fetching song</div>
           <pre>{error.message}</pre>
         </>
-      ) : (
+      ) : data.status === "unresolved" ? (
         <>
           <Image
-            src={
-              data?.ARTWORK ||
-              "https://images.mediaworks.nz/therock/Content/apps/theme/images/therock_square4x.png?width=400&height=400&crop=auto"
-            }
+            src={GENERIC_STATION_ARTWORK}
             width={50}
             height={50}
             alt="album art of now playing"
           />
-          <h2 className="md:text-2xl">{data.SONG}</h2>
-          <h2 className="md:text-xl">{data.ARTIST}</h2>
+          <div className="flex flex-col md:flex-row md:gap-3">
+            <h2 className="md:text-xl truncate">{data.title}</h2>
+            <h2 className="md:text-lg text-muted-foreground truncate">
+              {data.artist}
+            </h2>
+          </div>
+        </>
+      ) : (
+        <>
+          <Image
+            src={data.song.albumArt || GENERIC_STATION_ARTWORK}
+            width={50}
+            height={50}
+            alt="album art of now playing"
+          />
+          <div className="flex flex-col md:flex-row md:gap-3">
+            <h2 className="md:text-xl truncate">{data.song.title}</h2>
+            <h2 className="md:text-lg text-muted-foreground truncate">
+              {data.song.artist}
+            </h2>
+          </div>
         </>
       )}
       {isRefetching ? (
