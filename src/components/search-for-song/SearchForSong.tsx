@@ -1,7 +1,12 @@
 "use client";
 
-import { searchSpotifyTracks, SpotifySearchResult } from "@/lib/spotify";
+import {
+  SongSearchResult,
+  searchSongsInDb,
+  searchSpotifyRemainder,
+} from "@/server/actions/searchActions";
 import { useState } from "react";
+import { useLocalStorage } from "usehooks-ts";
 import { useDebounce } from "use-debounce";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "../ui/input";
@@ -27,15 +32,54 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
   const isMobile = useIsMobile();
-  const [selectedSongs, setSelectedSongs] = useState<SpotifySearchResult[]>([]);
-  const [favouriteSongId, setFavouriteSongId] = useState<string | null>(null);
+  const [selectedSongs, setSelectedSongs, removeSelectedSongs] =
+    useLocalStorage<SongSearchResult[]>(
+      `rock2000-vote-draft-songs-${currentYear}`,
+      [],
+      { initializeWithValue: false },
+    );
+  const [favouriteSongId, setFavouriteSongId, removeFavouriteSongId] =
+    useLocalStorage<string | null>(
+      `rock2000-vote-draft-favourite-${currentYear}`,
+      null,
+      { initializeWithValue: false },
+    );
   const [serverError, setServerError] = useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [manuallyRequestedSpotify, setManuallyRequestedSpotify] =
+    useState(false);
 
-  const { data, error, isLoading } = useQuery<SpotifySearchResult[]>({
-    queryKey: ["searchForSong", debouncedSearchTerm],
-    queryFn: () => searchSpotifyTracks(debouncedSearchTerm),
+  const normalizedSearchTerm = debouncedSearchTerm.trim().toLowerCase();
+
+  const dbSearch = useQuery<SongSearchResult[]>({
+    queryKey: ["searchForSong", "db", normalizedSearchTerm],
+    queryFn: () => searchSongsInDb(normalizedSearchTerm),
+    enabled: normalizedSearchTerm.length >= 2,
   });
+  const dbResults = dbSearch.data ?? [];
+  const dbHasResults = dbSearch.isSuccess && dbResults.length >= 1;
+  const dbFoundNothing = dbSearch.isSuccess && dbResults.length === 0;
+
+  const spotifyFallback = useQuery<SongSearchResult[]>({
+    queryKey: ["searchForSong", "spotify", normalizedSearchTerm],
+    queryFn: () =>
+      searchSpotifyRemainder(
+        normalizedSearchTerm,
+        dbResults.map((song) => song.spotifyId),
+        10,
+      ),
+    enabled:
+      normalizedSearchTerm.length >= 2 &&
+      (dbSearch.isSuccess || dbSearch.isError) &&
+      (dbFoundNothing || manuallyRequestedSpotify),
+  });
+
+  const data = [...dbResults, ...(spotifyFallback.data ?? [])];
+  const error = dbSearch.error ?? spotifyFallback.error;
+  const isLoading = dbSearch.isLoading;
+  const isFallbackLoading = spotifyFallback.isFetching;
+  const showSpotifySearchPrompt =
+    (dbHasResults || dbSearch.isError) && !manuallyRequestedSpotify;
 
   const favouriteSong = selectedSongs.find(
     (song) => song.spotifyId === favouriteSongId,
@@ -59,6 +103,8 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
       queryClient.invalidateQueries({
         queryKey: ["searchForSong", debouncedSearchTerm],
       });
+      removeSelectedSongs();
+      removeFavouriteSongId();
       router.push("/dashboard");
       router.refresh();
     },
@@ -67,7 +113,7 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
     },
   });
 
-  const handleAddSong = (song: SpotifySearchResult) => {
+  const handleAddSong = (song: SongSearchResult) => {
     if (
       !selectedSongs.some(
         (selectedSong) => selectedSong.spotifyId === song.spotifyId,
@@ -78,7 +124,7 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
     }
   };
 
-  const songPicked = (song: SpotifySearchResult) =>
+  const songPicked = (song: SongSearchResult) =>
     selectedSongs.some(
       (selectedSong) => selectedSong.spotifyId === song.spotifyId,
     );
@@ -108,7 +154,10 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
             <Input
               placeholder="Search a song..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setManuallyRequestedSpotify(false);
+              }}
               className="max-w-sm"
             />
           </div>
@@ -133,9 +182,12 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
             </div>
           </div>
         ) : (
-          <div className="flex p-3 rounded-md md:p-2 gap-3 md:gap-5 flex-wrap justify-center md:justify-start ">
-            {Array.isArray(data) && data.length > 0 ? (
-              data
+          <>
+            <div className="flex py-3 rounded-md md:p-2 gap-3 md:gap-5 flex-wrap justify-center md:justify-start ">
+              {data.length === 0 && !isFallbackLoading && !dbSearch.isError && (
+                <div className="ml-4 text-muted-foreground">No songs found</div>
+              )}
+              {data
                 .filter((song) => !songPicked(song))
                 .map((song) =>
                   isMobile ? (
@@ -220,11 +272,27 @@ export const SearchForSong = ({ currentYear }: SearchForSongProps) => {
                       </CardFooter>
                     </Card>
                   ),
-                )
-            ) : (
-              <div className="ml-4 text-muted-foreground">No songs found</div>
+                )}
+              {isFallbackLoading &&
+                Array.from({ length: 3 }).map((_, index) => (
+                  <Skeleton
+                    key={`spotify-loading-${index}`}
+                    className="w-full md:w-64 h-64"
+                  />
+                ))}
+            </div>
+            {showSpotifySearchPrompt && (
+              <div className="flex justify-center md:justify-start md:px-4">
+                <Button
+                  variant="outline"
+                  className="cursor-pointer w-full md:w-auto"
+                  onClick={() => setManuallyRequestedSpotify(true)}
+                >
+                  Search Spotify for more results
+                </Button>
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
       <Separator

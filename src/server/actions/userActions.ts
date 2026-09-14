@@ -2,11 +2,10 @@
 
 import { db } from "@/db";
 import { countdownResults, songs, votes, users } from "@/db/schema";
-import { SpotifySearchResult } from "@/lib/spotify";
-import { eq, and, inArray } from "drizzle-orm/sql/expressions/conditions";
+import { SongSearchResult } from "./searchActions";
+import { eq, and } from "drizzle-orm/sql/expressions/conditions";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { randomUUID } from "node:crypto";
 import { auth } from "@/lib/auth";
 import { buildPlayedSongIndex } from "./actions";
 import { getLeaderboard } from "./leaderboardActions";
@@ -141,7 +140,7 @@ export const getUserProfileStats = async (
 };
 
 export const submitUserVotes = async (
-  spotifySongs: SpotifySearchResult[],
+  spotifySongs: SongSearchResult[],
   currentYear: number,
   topPickSpotifyId: string | null,
 ): Promise<{ success: boolean; error?: string }> => {
@@ -170,23 +169,8 @@ export const submitUserVotes = async (
   }
 
   try {
-    // Built once, outside the loop: each song would otherwise rescan and
-    // re-normalize the whole ~2000-entry feed on every one of up to 20
-    // per-ballot lookups.
     const playedSongIndex = await buildPlayedSongIndex();
 
-    // The DB client is neon-http (a stateless HTTP connection, chosen so
-    // this app works cleanly on Vercel's serverless functions), which has
-    // no session/transaction support (`db.transaction()` throws). Its
-    // atomic alternative is `db.batch()` — but that sends a fixed array of
-    // pre-built queries in one shot, so every song's `songs.id` must be
-    // known BEFORE building any insert, rather than read back mid-loop as
-    // the previous transaction-based version did.
-
-    // De-duplicate songs by spotifyId, keeping only the first occurrence.
-    // This prevents issues where duplicate entries in the input would each
-    // get their own UUID on insert, causing foreign key violations when
-    // the second entry references a non-existent songs.id.
     const seenSpotifyIds = new Set<string>();
     const dedupedSongs = spotifySongs.filter((song) => {
       if (seenSpotifyIds.has(song.spotifyId)) return false;
@@ -194,18 +178,7 @@ export const submitUserVotes = async (
       return true;
     });
 
-    const spotifyIds = dedupedSongs.map((song) => song.spotifyId);
-    const existingSongs = spotifyIds.length
-      ? await db
-          .select({ id: songs.id, spotifyId: songs.spotifyId })
-          .from(songs)
-          .where(inArray(songs.spotifyId, spotifyIds))
-      : [];
-    const existingSongIdBySpotifyId = new Map(
-      existingSongs.map((row) => [row.spotifyId, row.id]),
-    );
-
-    const songEntries = dedupedSongs.map((spotifySong) => {
+    const songMeta = dedupedSongs.map((spotifySong) => {
       const playedSong = playedSongIndex.get(
         playedSongIndexKey(spotifySong.title, spotifySong.artist),
       );
@@ -220,78 +193,77 @@ export const submitUserVotes = async (
         parsedReleaseYear !== null && !Number.isNaN(parsedReleaseYear)
           ? parsedReleaseYear
           : null;
-      // Reuse the existing row's id so it round-trips through
-      // onConflictDoUpdate unchanged; only songs not already in the table
-      // need a freshly generated one.
-      const songId =
-        existingSongIdBySpotifyId.get(spotifySong.spotifyId) ?? randomUUID();
-
-      return { spotifySong, playedSongRank, album, releaseYear, songId };
+      return { spotifySong, playedSongRank, album, releaseYear };
     });
 
-    // A. Upsert every song into the global master song directory pool.
-    // album/releaseYear are only included when a value is actually
-    // available, so a song with no feed match today doesn't clobber a
-    // previously-cached value with null on conflict.
-    const songInserts = songEntries.map(
-      ({ spotifySong, album, releaseYear, songId }) =>
-        db
-          .insert(songs)
-          .values({
-            id: songId,
-            spotifyId: spotifySong.spotifyId,
+    if (songMeta.length === 0) {
+      return { success: false, error: "No songs to submit." };
+    }
+
+    // Upsert songs first and read back the real id via .returning() —
+    // avoids a race where two concurrent submitters guess different ids
+    // for the same brand-new song.
+    const songInserts = songMeta.map(({ spotifySong, album, releaseYear }) =>
+      db
+        .insert(songs)
+        .values({
+          spotifyId: spotifySong.spotifyId,
+          title: spotifySong.title,
+          artist: spotifySong.artist,
+          albumArt: spotifySong.albumArt || null,
+          ...(album ? { album } : {}),
+          ...(releaseYear ? { releaseYear } : {}),
+        })
+        .onConflictDoUpdate({
+          target: songs.spotifyId,
+          set: {
             title: spotifySong.title,
             artist: spotifySong.artist,
-            albumArt: spotifySong.albumArt || null,
+            albumArt: spotifySong.albumArt,
             ...(album ? { album } : {}),
             ...(releaseYear ? { releaseYear } : {}),
-          })
-          .onConflictDoUpdate({
-            target: songs.spotifyId,
-            set: {
-              title: spotifySong.title,
-              artist: spotifySong.artist,
-              albumArt: spotifySong.albumArt,
-              ...(album ? { album } : {}),
-              ...(releaseYear ? { releaseYear } : {}),
-            },
-          }),
+          },
+        })
+        .returning({ id: songs.id, spotifyId: songs.spotifyId }),
     );
+    const [firstSongInsert, ...restSongInserts] = songInserts;
+    const songInsertResults = await db.batch([
+      firstSongInsert,
+      ...restSongInserts,
+    ]);
 
-    const countdownResultInserts = songEntries
+    const songIdBySpotifyId = new Map<string, string>();
+    for (const rows of songInsertResults) {
+      songIdBySpotifyId.set(rows[0].spotifyId, rows[0].id);
+    }
+
+    const countdownResultInserts = songMeta
       .filter(
         (entry): entry is typeof entry & { playedSongRank: number } =>
           !!entry.playedSongRank,
       )
-      .map(({ songId, playedSongRank }) =>
+      .map(({ spotifySong, playedSongRank }) =>
         db
           .insert(countdownResults)
           .values({
-            songId,
+            songId: songIdBySpotifyId.get(spotifySong.spotifyId)!,
             position: playedSongRank,
             countdownYear: currentYear,
           })
           .onConflictDoNothing(),
       );
 
-    const voteInserts = songEntries.map(({ spotifySong, songId }) =>
+    const voteInserts = songMeta.map(({ spotifySong }) =>
       db.insert(votes).values({
         userId,
-        songId,
+        songId: songIdBySpotifyId.get(spotifySong.spotifyId)!,
         voteYear: currentYear,
         isTopPick: spotifySong.spotifyId === topPickSpotifyId,
       }),
     );
 
-    const allInserts = [
-      ...songInserts,
-      ...countdownResultInserts,
-      ...voteInserts,
-    ];
+    const allInserts = [...countdownResultInserts, ...voteInserts];
     const [firstInsert, ...restInserts] = allInserts;
-    if (!firstInsert) {
-      return { success: false, error: "No songs to submit." };
-    }
     await db.batch([firstInsert, ...restInserts]);
 
     revalidatePath("/dashboard");

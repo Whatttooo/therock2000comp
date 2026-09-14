@@ -134,6 +134,7 @@ export const getCurrentPlayedSong = async (): Promise<PlayedSong> => {
     const allPlayedSongs = await getAllPlayedSongs();
     return allPlayedSongs[0];
   } catch (error) {
+    console.error("[actions:get-current-played-song-failed]", error);
     throw new Error("error fetching song");
   }
 };
@@ -156,6 +157,7 @@ export const getAllPlayedSongs = async (): Promise<PlayedSong[]> => {
       ),
     }));
   } catch (error) {
+    console.error("[actions:get-all-played-songs-failed]", error);
     throw new Error("error fetching all songs");
   }
 };
@@ -396,6 +398,11 @@ const getSongDetailForRank = async (rank: number): Promise<SongDetail> => {
     playedSong.artist,
   );
   if (!spotifyTrack) {
+    console.warn("[actions:song-unresolved]", {
+      rank,
+      title: playedSong.title,
+      artist: playedSong.artist,
+    });
     return {
       status: "unresolved",
       title: playedSong.title,

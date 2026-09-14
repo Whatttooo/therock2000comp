@@ -72,6 +72,8 @@ const MAX_RATE_LIMIT_RETRIES = 2;
 // once, the rest of the run proceeds unattended.
 const CHECKPOINT_SIZE = 25;
 
+let spotifyRequestCount = 0;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -112,6 +114,7 @@ async function searchSpotifyStrict(
   const strictQuery = `track:"${title.trim()}" artist:"${artist.trim()}"`;
   const searchUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(strictQuery)}&type=track&limit=1`;
 
+  spotifyRequestCount++;
   const response = await fetch(searchUrl, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -143,7 +146,6 @@ async function searchSpotifyStrict(
       title: track.name,
       artist: track.artists?.[0]?.name || "Unknown Artist",
       albumArt: track.album?.images?.[0]?.url || FALLBACK_ALBUM_ART,
-      durationMs: track.duration_ms,
       releaseYear: track.album?.release_date
         ? new Date(track.album.release_date).getFullYear()
         : new Date().getFullYear(),
@@ -290,23 +292,47 @@ async function main() {
   // a severe rate-limit block (see the comment on REQUEST_DELAY_MS above).
   // Also pauses once, after the first CHECKPOINT_SIZE songs, for a manual
   // keypress — see the comment on CHECKPOINT_SIZE above.
-  console.log(
-    `Phase B: resolving ${needsSpotify.length} songs via Spotify (one at a time, ${REQUEST_DELAY_MS}ms apart, pausing once after the first ${CHECKPOINT_SIZE} for confirmation)...`,
-  );
-  const token = await getSpotifyServerToken();
   let abortedEarly = false;
   let stoppedByUser = false;
+  let stoppedByRequestCap = false;
+  let skipPhaseB = false;
+  let requestCap: number | null = null;
   let hasPassedCheckpoint = false;
   const rl = needsSpotify.length > 0
     ? createInterface({ input: process.stdin, output: process.stdout })
     : null;
 
-  for (let i = 0; i < needsSpotify.length; i++) {
+  if (rl) {
+    console.log(
+      `Phase B needs to resolve ${needsSpotify.length} songs via Spotify — roughly ${needsSpotify.length} requests (a small number of songs may take a couple more, retitled/multi-artist cases usually resolve in one).`,
+    );
+    const preflightAnswer = await rl.question(
+      "Press Enter to resolve them all, type a number to stop after that many Spotify requests, or type 'q' to skip Spotify resolution entirely: ",
+    );
+    const trimmedAnswer = preflightAnswer.trim();
+    if (trimmedAnswer.toLowerCase().startsWith("q")) {
+      skipPhaseB = true;
+      console.log("Skipping Phase B entirely by request.\n");
+    } else if (trimmedAnswer !== "") {
+      const parsedCap = parseInt(trimmedAnswer, 10);
+      if (Number.isNaN(parsedCap) || parsedCap <= 0) {
+        console.log("Didn't recognise that as a number — skipping Phase B entirely to be safe. Re-run to try again.\n");
+        skipPhaseB = true;
+      } else {
+        requestCap = parsedCap;
+        console.log(`Will stop after ~${requestCap} Spotify requests.\n`);
+      }
+    }
+  }
+
+  const token = skipPhaseB ? null : await getSpotifyServerToken();
+
+  for (let i = 0; !skipPhaseB && i < needsSpotify.length; i++) {
     const playedSong = needsSpotify[i];
 
     try {
       const track = await resolveWithRetry(
-        token,
+        token!,
         playedSong.title,
         playedSong.artist,
       );
@@ -378,6 +404,14 @@ async function main() {
       break;
     }
 
+    if (requestCap !== null && spotifyRequestCount >= requestCap) {
+      console.log(
+        `\nReached the requested cap of ${requestCap} Spotify requests after ${processed}/${needsSpotify.length} songs. Stopping here — re-run the script later to pick up where this left off.`,
+      );
+      stoppedByRequestCap = true;
+      break;
+    }
+
     if (!hasPassedCheckpoint && processed % CHECKPOINT_SIZE === 0) {
       hasPassedCheckpoint = true;
       console.log(
@@ -400,16 +434,23 @@ async function main() {
   rl?.close();
 
   console.log("\n--- Summary ---");
+  if (skipPhaseB) {
+    console.log("Phase B (Spotify resolution) was skipped by request.");
+  }
   if (abortedEarly) {
     console.log("Run stopped early due to a severe Spotify rate-limit block (see above).");
   }
   if (stoppedByUser) {
     console.log("Run stopped by user request. Re-run the script later to pick up where this left off — already-seeded songs are skipped.");
   }
+  if (stoppedByRequestCap) {
+    console.log("Run stopped after reaching the requested Spotify request cap. Re-run the script later to pick up where this left off — already-seeded songs are skipped.");
+  }
   console.log(`Already fully seeded (skipped): ${alreadySeededCount}`);
   console.log(`Backfilled countdown_results for existing songs: ${backfilledCount}`);
   console.log(`Newly resolved via Spotify: ${resolvedCount}`);
   console.log(`Failed: ${failures.length}`);
+  console.log(`Spotify requests made this run: ${spotifyRequestCount}`);
 
   if (failures.length > 0) {
     console.log("\nFailures (re-running the script will retry these):");

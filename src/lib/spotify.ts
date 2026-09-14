@@ -1,4 +1,4 @@
-"use server"
+"use server";
 import { buildSpotifyQueryCandidates } from "./utils";
 
 export interface SpotifySearchResult {
@@ -6,10 +6,8 @@ export interface SpotifySearchResult {
   title: string;
   artist: string;
   albumArt: string;
-  durationMs: number;
   releaseYear: number;
 }
-
 
 const SPOTIFY_API_BASE = "https://api.spotify.com";
 const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -41,11 +39,20 @@ async function fetchFreshSpotifyToken(): Promise<string> {
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
-    throw new Error("Missing Spotify credentials inside .env.local configuration file.");
+    console.error("[spotify:missing-credentials]", {
+      missingClientId: !clientId,
+      missingClientSecret: !clientSecret,
+      vercelEnv: process.env.VERCEL_ENV,
+    });
+    throw new Error(
+      "Missing Spotify credentials inside .env.local configuration file.",
+    );
   }
 
   // Spotify requires client keys to be passed as a Base64 encoded string wrapper
-  const basicAuthToken = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const basicAuthToken = Buffer.from(`${clientId}:${clientSecret}`).toString(
+    "base64",
+  );
 
   const response = await fetch(SPOTIFY_TOKEN_URL, {
     method: "POST",
@@ -98,20 +105,34 @@ async function fetchSpotifyWithRetry(url: string): Promise<Response> {
   const token = await getSpotifyServerToken();
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
+    next: { revalidate: 60 },
   });
+
+  if (response.status === 429) {
+    const bodyText = await response.clone().text();
+    console.error("[spotify:rate-limited]", {
+      url,
+      retryAfter: response.headers.get("Retry-After"),
+      body: bodyText,
+    });
+  }
 
   if (response.status !== 401) {
     return response;
   }
 
+  console.warn("[spotify:token-retry-401]", { url });
   clearSpotifyToken();
   const freshToken = await getSpotifyServerToken();
   return fetch(url, {
     headers: { Authorization: `Bearer ${freshToken}` },
+    next: { revalidate: 60 },
   });
 }
 
-export async function searchSpotifyTracks(query: string): Promise<SpotifySearchResult[]> {
+export async function searchSpotifyTracks(
+  query: string,
+): Promise<SpotifySearchResult[]> {
   if (!query || query.trim() === "") return [];
 
   try {
@@ -121,7 +142,9 @@ export async function searchSpotifyTracks(query: string): Promise<SpotifySearchR
     const response = await fetchSpotifyWithRetry(searchUrl);
 
     if (!response.ok) {
-      throw new Error(`Spotify search query failed with status: ${response.status}`);
+      throw new Error(
+        `Spotify search query failed with status: ${response.status}`,
+      );
     }
 
     const data = await response.json();
@@ -133,20 +156,21 @@ export async function searchSpotifyTracks(query: string): Promise<SpotifySearchR
       const albumArt = track.album?.images?.[0]?.url || FALLBACK_ALBUM_ART;
       const releaseYear = track.album?.release_date
         ? new Date(track.album.release_date).getFullYear()
-        : 2026;
+        : new Date().getFullYear();
 
       return {
         spotifyId: track.id,
         title: track.name,
         artist: track.artists?.[0]?.name || "Unknown Artist",
         albumArt,
-        durationMs: track.duration_ms,
         releaseYear,
       };
     });
-
   } catch (error) {
-    console.error(`Failed to process music lookup query for "${query}":`, error);
+    console.error(
+      `Failed to process music lookup query for "${query}":`,
+      error,
+    );
     return []; // Return an empty array on failures to keep frontend UI components from crashing
   }
 }
@@ -162,7 +186,10 @@ async function strictTrackSearch(
 
   const response = await fetchSpotifyWithRetry(searchUrl);
 
-  if (!response.ok) throw new Error(`Strict match lookup failed with status: ${response.status}`);
+  if (!response.ok)
+    throw new Error(
+      `Strict match lookup failed with status: ${response.status}`,
+    );
 
   const data = await response.json();
   const track = data.tracks?.items?.[0]; // Strictly isolate the top item block
@@ -174,25 +201,46 @@ async function strictTrackSearch(
     title: track.name,
     artist: track.artists?.[0]?.name || "Unknown Artist",
     albumArt: track.album?.images?.[0]?.url || FALLBACK_ALBUM_ART,
-    durationMs: track.duration_ms,
-    releaseYear: track.album?.release_date ? new Date(track.album.release_date).getFullYear() : 2026,
+    releaseYear: track.album?.release_date
+      ? new Date(track.album.release_date).getFullYear()
+      : new Date().getFullYear(),
   };
 }
 
-export async function getSpotifyTrackFromTitleAndArtist(title: string, artist: string): Promise<SpotifySearchResult | null> {
+export async function getSpotifyTrackFromTitleAndArtist(
+  title: string,
+  artist: string,
+): Promise<SpotifySearchResult | null> {
   if (!title || !artist) return null;
 
   try {
     // Try progressively looser (title, artist) candidates — see
     // buildSpotifyQueryCandidates for what each loosening handles and why —
     // stopping at the first one that matches.
-    for (const candidate of buildSpotifyQueryCandidates(title, artist)) {
-      const track = await strictTrackSearch(candidate.title, candidate.artist);
-      if (track) return track;
+    const candidates = buildSpotifyQueryCandidates(title, artist);
+    for (const candidate of candidates) {
+      try {
+        const track = await strictTrackSearch(candidate.title, candidate.artist);
+        if (track) return track;
+      } catch (error) {
+        console.warn("[spotify:candidate-failed]", {
+          title: candidate.title,
+          artist: candidate.artist,
+          error,
+        });
+      }
     }
+    console.warn("[spotify:no-match]", {
+      title,
+      artist,
+      candidatesTried: candidates.map((c) => `${c.title} - ${c.artist}`),
+    });
     return null;
   } catch (error) {
-    console.error(`Failed high-precision track resolution for "${title}" by ${artist}:`, error);
+    console.error(
+      `Failed high-precision track resolution for "${title}" by ${artist}:`,
+      error,
+    );
     return null;
   }
 }

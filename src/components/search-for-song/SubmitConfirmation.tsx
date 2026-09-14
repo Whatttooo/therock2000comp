@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { SpotifySearchResult } from "@/lib/spotify";
+import { SongSearchResult } from "@/server/actions/searchActions";
 import { Button } from "../ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -24,7 +24,7 @@ import {
 interface SubmitConfirmationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  favouriteSong?: SpotifySearchResult;
+  favouriteSong?: SongSearchResult;
   onConfirm: () => void;
 }
 
