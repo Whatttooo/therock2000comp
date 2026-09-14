@@ -16,7 +16,7 @@ export function ShowNowPlaying({ initialData }: { initialData: SongDetail }) {
   });
 
   return (
-    <div className="flex gap-3 md:gap-5 items-center">
+    <div className="flex gap-3 md:gap-5 items-center min-w-0">
       {error ? (
         <>
           <div>Error fetching song</div>
@@ -30,9 +30,9 @@ export function ShowNowPlaying({ initialData }: { initialData: SongDetail }) {
             height={50}
             alt="album art of now playing"
           />
-          <div className="flex flex-col md:flex-row md:gap-3">
-            <h2 className="md:text-xl truncate">{data.title}</h2>
-            <h2 className="md:text-lg text-muted-foreground truncate">
+          <div className="flex flex-col md:flex-row md:gap-3 min-w-0">
+            <h2 className="md:text-xl truncate min-w-0">{data.title}</h2>
+            <h2 className="md:text-lg text-muted-foreground truncate min-w-0">
               {data.artist}
             </h2>
           </div>
@@ -45,9 +45,9 @@ export function ShowNowPlaying({ initialData }: { initialData: SongDetail }) {
             height={50}
             alt="album art of now playing"
           />
-          <div className="flex flex-col md:flex-row md:gap-3">
-            <h2 className="md:text-xl truncate">{data.song.title}</h2>
-            <h2 className="md:text-lg text-muted-foreground truncate">
+          <div className="flex flex-col md:flex-row md:gap-3 min-w-0">
+            <h2 className="md:text-xl truncate min-w-0">{data.song.title}</h2>
+            <h2 className="md:text-lg text-muted-foreground truncate min-w-0">
               {data.song.artist}
             </h2>
           </div>

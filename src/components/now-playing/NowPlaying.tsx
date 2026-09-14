@@ -5,7 +5,7 @@ export async function NowPlayingHeader() {
   try {
     const initialSongDetail = await getCurrentSongDetail();
     return (
-      <div className="flex">
+      <div className="flex min-w-0">
         <ShowNowPlaying initialData={initialSongDetail} />
       </div>
     );
