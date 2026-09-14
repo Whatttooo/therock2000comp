@@ -1,9 +1,22 @@
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { getSongDetail, getSongVoteSummary } from "@/server/actions/actions";
-import { Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowLeft, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+
+function BackToPlayedSongsButton() {
+  return (
+    <Button asChild variant="outline" className="mt-6 mx-4 md:mx-0">
+      <Link href="/played-songs">
+        <ArrowLeft data-icon="inline-start" />
+        Back to played songs
+      </Link>
+    </Button>
+  );
+}
 
 interface SongPageProps {
   params: Promise<{ song: string }>;
@@ -71,6 +84,7 @@ export default async function SongPage(props: SongPageProps) {
             </div>
           </div>
         </Card>
+        <BackToPlayedSongsButton />
       </div>
     );
   }
@@ -114,6 +128,7 @@ export default async function SongPage(props: SongPageProps) {
             </div>
           </div>
         </Card>
+        <BackToPlayedSongsButton />
       </div>
     );
   }
@@ -175,6 +190,7 @@ export default async function SongPage(props: SongPageProps) {
           </div>
         </div>
       </Card>
+      <BackToPlayedSongsButton />
     </div>
   );
 }
