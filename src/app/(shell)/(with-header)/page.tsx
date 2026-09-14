@@ -99,7 +99,7 @@ export default async function Home() {
             <CardTitle>Total votes</CardTitle>
             <CardDescription>{currentYear}</CardDescription>
           </CardHeader>
-          <CardContent className="flex md:justify-center flex-1 items-center">
+          <CardContent className="flex justify-center flex-1 items-center">
             <p className="text-2xl md:text-3xl text-primary font-bold">
               {totalVotes.toLocaleString()}
             </p>

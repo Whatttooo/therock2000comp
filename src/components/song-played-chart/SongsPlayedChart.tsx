@@ -55,7 +55,7 @@ export function SongsPlayedChart({
     <Card
       size={isCompact ? "sm" : "default"}
       className={cn(
-        "flex flex-col w-full md:gap-(--card-spacing) gap-2 mx-4 md:mx-0 md:w-fit md:min-w-[220px]",
+        "flex flex-col w-full md:gap-(--card-spacing) gap-2  md:mx-0 md:w-fit md:min-w-[220px]",
         isCompact && "mx-0 w-full md:w-full md:min-w-0",
       )}
     >
