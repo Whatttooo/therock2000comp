@@ -59,7 +59,7 @@ export const columns: ColumnDef<typeof leaderTableFeatures, LeaderboardEntry>[] 
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="flex items-center gap-2 md:gap-4 rounded-md p-1 pl-0 hover:bg-slate-800 cursor-pointer w-fit"
         >
-          No. Songs Played
+          Played
           <ArrowUpDown className="h-4 w-4" />
         </div>
       );

@@ -51,24 +51,54 @@ export const getUserVotesWithStatus = async (
     )
     .where(and(eq(votes.userId, userId), eq(votes.voteYear, year)));
 
-  const played = rows.filter(
-    (row): row is typeof row & { position: number } => row.position !== null,
-  );
-  const bestPosition =
-    played.length > 0 ? Math.min(...played.map((row) => row.position)) : null;
+  // A voted song may have aired since the last time anyone visited its
+  // /played-songs/[rank] page (the only other place a countdown_results
+  // row gets created) — catch that here rather than show "not played yet"
+  // for a song that's actually already aired. Same backfill logic as
+  // getSongDetailForRank's scenario 3, just scoped to this user's ballot.
+  const unplayedRows = rows.filter((row) => row.position === null);
+  const backfilledPositions = new Map<string, number>();
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    artist: row.artist,
-    albumArt: row.albumArt,
-    position: row.position,
-    isTopPick: row.isTopPick,
-    points: computeSongPoints(
-      { isTopPick: row.isTopPick, position: row.position },
-      bestPosition,
-    ),
-  }));
+  if (unplayedRows.length > 0) {
+    const playedSongIndex = await buildPlayedSongIndex();
+    for (const row of unplayedRows) {
+      const playedSong = playedSongIndex.get(
+        playedSongIndexKey(row.title, row.artist),
+      );
+      const rank = playedSong ? parseInt(playedSong.rank, 10) : NaN;
+      if (Number.isNaN(rank)) continue;
+
+      await db
+        .insert(countdownResults)
+        .values({ songId: row.id, position: rank, countdownYear: year })
+        .onConflictDoNothing();
+      backfilledPositions.set(row.id, rank);
+    }
+  }
+
+  const getEffectivePosition = (row: (typeof rows)[number]): number | null =>
+    row.position ?? backfilledPositions.get(row.id) ?? null;
+
+  const positions = rows
+    .map(getEffectivePosition)
+    .filter((position): position is number => position !== null);
+  const bestPosition = positions.length > 0 ? Math.min(...positions) : null;
+
+  return rows.map((row) => {
+    const position = getEffectivePosition(row);
+    return {
+      id: row.id,
+      title: row.title,
+      artist: row.artist,
+      albumArt: row.albumArt,
+      position,
+      isTopPick: row.isTopPick,
+      points: computeSongPoints(
+        { isTopPick: row.isTopPick, position },
+        bestPosition,
+      ),
+    };
+  });
 };
 
 export type UserProfileStats = {
@@ -182,9 +212,7 @@ export const submitUserVotes = async (
       const playedSong = playedSongIndex.get(
         playedSongIndexKey(spotifySong.title, spotifySong.artist),
       );
-      const playedSongRank = playedSong
-        ? parseInt(playedSong.rank, 10)
-        : null;
+      const playedSongRank = playedSong ? parseInt(playedSong.rank, 10) : null;
       const album = playedSong?.album || null;
       const parsedReleaseYear = playedSong?.albumYear
         ? parseInt(playedSong.albumYear, 10)

@@ -16,39 +16,110 @@ import { notFound } from "next/navigation";
 const rock2000PlayedEndpoint =
   "https://radio-api.mediaworks.nz/comp-api/v1/countdown/therock";
 
-// Plain typos in the feed's own title text (as opposed to KNOWN_ALIASES in
-// lib/utils.ts, which corrects spelling *differences* between an otherwise
-// correct feed title and Spotify's canonical one). These block an exact
-// Spotify match outright, so they're corrected here, before the feed data
-// reaches either the strict Spotify lookup or the DB match index, rather
-// than inside normalizeSongTitle (which only helps two already-seeded rows
-// match each other, and lowercases its input, losing the casing a strict
-// Spotify query needs).
+// Plain errors in the feed's own title/artist text (as opposed to
+// KNOWN_ALIASES in lib/utils.ts, which corrects spelling *differences*
+// between an otherwise correct feed title and Spotify's canonical one).
+// These block an exact Spotify match outright, so they're corrected here,
+// before the feed data reaches either the strict Spotify lookup or the DB
+// match index, rather than inside normalizeSongTitle (which only helps two
+// already-seeded rows match each other, and lowercases its input, losing
+// the casing a strict Spotify query needs).
 //
-// Scoped to (title, artist) pairs rather than title alone: several of these
-// corrected titles are common enough words/phrases ("Rockit", "Road Trip")
-// that a different artist could legitimately have a song with that exact
-// title, so an artist-blind correction risks mangling an unrelated song.
-const KNOWN_FEED_TITLE_TYPOS: {
+// Scoped to (title, artist) pairs rather than either alone: several of
+// these corrected titles are common enough words/phrases ("Rockit", "Road
+// Trip") that a different artist could legitimately have a song with that
+// exact title, so a blind correction risks mangling an unrelated song.
+// `replacement` only needs to name whichever field is actually wrong — the
+// other stays as the feed reported it.
+const KNOWN_FAILURES_MAP: {
   title: RegExp;
   artist: RegExp;
-  correctedTitle: string;
+  replacement: { title?: string; artist?: string };
 }[] = [
-  { title: /\bjack and dianne\b/i, artist: /mellencamp/i, correctedTitle: "Jack and Diane" },
-  { title: /^rockit$/i, artist: /def leppard/i, correctedTitle: "Rocket" },
-  { title: /^everyday.s a saturday$/i, artist: /elemeno p/i, correctedTitle: "Every Day's A Saturday" },
-  { title: /^magdelena$/i, artist: /a perfect circle/i, correctedTitle: "Magdalena" },
-  { title: /^road trip$/i, artist: /steriogram/i, correctedTitle: "Roadtrip" },
-  { title: /^roots radicals$/i, artist: /rancid/i, correctedTitle: "Roots Radical" },
-  { title: /^running with the devil$/i, artist: /van halen/i, correctedTitle: "Runnin' With The Devil" },
-  { title: /^d\.?o\.?a\.?$/i, artist: /foo fighters/i, correctedTitle: "DOA" },
+  {
+    title: /\bjack and dianne\b/i,
+    artist: /mellencamp/i,
+    replacement: { title: "Jack and Diane" },
+  },
+  {
+    title: /^rockit$/i,
+    artist: /def leppard/i,
+    replacement: { title: "Rocket" },
+  },
+  {
+    title: /^everyday.s a saturday$/i,
+    artist: /elemeno p/i,
+    replacement: { title: "Every Day's A Saturday" },
+  },
+  {
+    title: /^magdelena$/i,
+    artist: /a perfect circle/i,
+    replacement: { title: "Magdalena" },
+  },
+  {
+    title: /^road trip$/i,
+    artist: /steriogram/i,
+    replacement: { title: "Roadtrip" },
+  },
+  {
+    title: /^roots radicals$/i,
+    artist: /rancid/i,
+    replacement: { title: "Roots Radical" },
+  },
+  {
+    title: /^running with the devil$/i,
+    artist: /van halen/i,
+    replacement: { title: "Runnin' With The Devil" },
+  },
+  {
+    title: /^d\.?o\.?a\.?$/i,
+    artist: /foo fighters/i,
+    replacement: { title: "DOA" },
+  },
+  {
+    title: /^rivers$/i,
+    artist: /powderchutes/i,
+    replacement: { artist: "Powder Chutes" },
+  },
+  {
+    title: /^peace sells\.\.\. but who.s buying\?$/i,
+    artist: /megadeth/i,
+    replacement: { title: "Peace Sells" },
+  },
+  {
+    title: /^i bet that you.d look good on the dancefloor$/i,
+    artist: /arctic monkeys/i,
+    replacement: { title: "I Bet You Look Good On The Dancefloor" },
+  },
+  {
+    title: /^i.m on fire$/i,
+    artist: /head like a hole/i,
+    replacement: { title: "Im on Fire" },
+  },
+  {
+    title: /^girl.s got rhythm$/i,
+    artist: /ac\/dc/i,
+    replacement: { title: "Girls Got Rhythm" },
+  },
+  {
+    title: /^from can to can.t$/i,
+    artist: /sound city/i,
+    replacement: { artist: "Corey Taylor" },
+  },
 ];
 
-function correctKnownFeedTitleTypos(title: string, artist: string): string {
-  const match = KNOWN_FEED_TITLE_TYPOS.find(
+function applyKnownFailureFix(
+  title: string,
+  artist: string,
+): { title: string; artist: string } {
+  const match = KNOWN_FAILURES_MAP.find(
     (entry) => entry.title.test(title) && entry.artist.test(artist),
   );
-  return match ? match.correctedTitle : title;
+  if (!match) return { title, artist };
+  return {
+    title: match.replacement.title ?? title,
+    artist: match.replacement.artist ?? artist,
+  };
 }
 
 // The feed censors profanity with asterisks (e.g. "Unf**k The World"),
@@ -56,7 +127,9 @@ function correctKnownFeedTitleTypos(title: string, artist: string): string {
 // substitution: "f**k" only ever appears in the feed as this censorship,
 // never as a legitimate title fragment on its own.
 function desensorFeedProfanity(title: string): string {
-  return title.replace(/f\*\*k/gi, (match) => (match[0] === "F" ? "Fuck" : "fuck"));
+  return title.replace(/f\*\*k/gi, (match) =>
+    match[0] === "F" ? "Fuck" : "fuck",
+  );
 }
 
 // A row from the `songs` table, the DB-backed shape used by getSongDetail.
@@ -150,12 +223,14 @@ export const getAllPlayedSongs = async (): Promise<PlayedSong[]> => {
       next: { revalidate: 300 },
     });
     const data: PlayedSong[] = await response.json();
-    return data.map((song) => ({
-      ...song,
-      title: desensorFeedProfanity(
-        correctKnownFeedTitleTypos(song.title, song.artist),
-      ),
-    }));
+    return data.map((song) => {
+      const fixed = applyKnownFailureFix(song.title, song.artist);
+      return {
+        ...song,
+        title: desensorFeedProfanity(fixed.title),
+        artist: fixed.artist,
+      };
+    });
   } catch (error) {
     console.error("[actions:get-all-played-songs-failed]", error);
     throw new Error("error fetching all songs");
@@ -478,7 +553,18 @@ const getSongDetailForId = async (id: string): Promise<SongDetail | null> => {
     return { status: "not-played", song: toSongRecord(songRow) };
   }
 
+  const currentYear = new Date().getFullYear();
   const finalSongRow = await backfillAlbumMetadata(songRow, playedSong);
+
+  // Check the db too and update it
+  await db
+    .insert(countdownResults)
+    .values({
+      songId: songRow.id,
+      position: parseInt(playedSong.rank),
+      countdownYear: currentYear,
+    })
+    .onConflictDoNothing();
 
   return {
     status: "played",
@@ -495,9 +581,7 @@ const getSongDetailForId = async (id: string): Promise<SongDetail | null> => {
  * ("Extend [song] route to look up by rank OR songs.id") for the full
  * scenario breakdown.
  */
-export const getSongDetail = async (
-  idOrRank: string,
-): Promise<SongDetail> => {
+export const getSongDetail = async (idOrRank: string): Promise<SongDetail> => {
   if (/^\d+$/.test(idOrRank)) {
     return getSongDetailForRank(parseInt(idOrRank, 10));
   }
@@ -586,76 +670,3 @@ export const getAllPlayedSongsWithArt = async (): Promise<Song[]> => {
   });
   return updatedArtwork;
 };
-
-export const updateSong = async (song: Song) => {
-  const playedSongs = await getAllPlayedSongs();
-  const playedSongFromList = playedSongs.find(
-    (playedSong) =>
-      playedSong.title.toLowerCase() === song.SONG.toLowerCase() &&
-      playedSong.artist.toLowerCase() === song.ARTIST.toLowerCase(),
-  );
-  if (!playedSongFromList) {
-    return song;
-  }
-  return {
-    ...song,
-    PLAYED_AT: parseInt(playedSongFromList.rank),
-    POINTS: 2000 - parseInt(playedSongFromList.rank),
-  };
-};
-
-export const updateSongListPoints = async (songsToUpdate: Song[]) => {
-  const allPlayedSongs = await getAllPlayedSongs();
-  return songsToUpdate.map((songToUpdate) => {
-    if (songToUpdate.POINTS !== undefined) {
-      return songToUpdate;
-    }
-    const playedSongFromList = allPlayedSongs.find(
-      (song) =>
-        song.title.toLowerCase() === songToUpdate.SONG.toLowerCase() &&
-        song.artist.toLowerCase() === songToUpdate.ARTIST.toLowerCase(),
-    );
-
-    if (!playedSongFromList) {
-      return songToUpdate;
-    }
-
-    return {
-      ...songToUpdate,
-      PLAYED_AT: parseInt(playedSongFromList.rank),
-      POINTS: 2000 - parseInt(playedSongFromList.rank),
-    };
-  });
-};
-
-// export const getUsersForLeaderBoard = async (): Promise<User[]> => {
-//   const usersForLeaderBoard = await Promise.all(
-//     users.map(async (user) => {
-//       const userUpdatedSongs = await updateSongListPoints(user.songs);
-//       const updatedUser = {
-//         ...user,
-//         songs: [...userUpdatedSongs],
-//         points: await getUserPoints(userUpdatedSongs),
-//         numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
-//       };
-//       return updatedUser;
-//     })
-//   );
-//   return usersForLeaderBoard;
-// };
-
-// export const getUserById = async (id: number): Promise<User | null> => {
-//   const user = users.find((user) => user.id === id);
-//   if (!user) {
-//     return null;
-//   }
-
-//   const userUpdatedSongs = await updateSongListPoints(user.songs);
-//   const updatedUser = {
-//     ...user,
-//     songs: [...userUpdatedSongs],
-//     points: await getUserPoints(userUpdatedSongs),
-//     numberOfSongsPlayed: await getNumberOfSongsPlayed(userUpdatedSongs),
-//   };
-//   return updatedUser;
-// };

@@ -156,7 +156,19 @@ export function normalizeSongTitle(title: string): string {
 const SECONDARY_ARTIST_SPLIT_REGEX =
   /\s*(\/|,|&|\bfeat\.?\b|\bfeaturing\b|\bft\.?\b|\bx\b)\s*/i;
 
+// Band names that contain one of the split characters above as part of
+// their own actual name, not as secondary-artist notation — checked before
+// splitting so these pass through unmangled. Same escape-valve shape as
+// KNOWN_ALIASES above: a short list for one-offs the general rule can't
+// tell apart from a real secondary credit (e.g. "AC/DC" vs "Jimmy
+// Barnes/INXS" are the same shape of string).
+const ARTIST_NAMES_WITH_LITERAL_SPLIT_CHAR = [/^ac\/dc$/i];
+
 export function extractPrimaryArtist(artist: string): string {
+  const trimmed = artist.trim();
+  if (ARTIST_NAMES_WITH_LITERAL_SPLIT_CHAR.some((pattern) => pattern.test(trimmed))) {
+    return trimmed;
+  }
   const [primary] = artist.split(SECONDARY_ARTIST_SPLIT_REGEX);
   return primary.trim();
 }
